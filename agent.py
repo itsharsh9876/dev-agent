@@ -3,14 +3,16 @@ import subprocess
 import os
 import shutil
 import time
+import ast
+import re
 from datetime import datetime
 
 # ══════════════════════════════════════════════════════
 # CONFIG - CHANGE THESE PATHS
 # ══════════════════════════════════════════════════════
-SOURCE_FOLDER      = "C:/Users/APNABEAST/Documents/source"       # folder to copy FROM
-DESTINATION_FOLDER = "C:/Users/APNABEAST/dev-agent"              # your GitHub repo folder
-REQUIREMENTS_FILE  = "C:/Users/APNABEAST/Documents/requirements.txt"  # your requirements text file
+SOURCE_FOLDER      = "C:/Users/APNABEAST/Documents/source"
+DESTINATION_FOLDER = "C:/Users/APNABEAST/dev-agent"
+REQUIREMENTS_FILE  = "C:/Users/APNABEAST/Documents/requirements.txt"
 GIT_BRANCH         = "main"
 
 # ══════════════════════════════════════════════════════
@@ -51,154 +53,39 @@ def clean_content(content):
     return content.strip()
 
 # ══════════════════════════════════════════════════════
-# STEP 1: READ REQUIREMENTS FROM TEXT FILE
+# GIT HELPERS
 # ══════════════════════════════════════════════════════
-def read_requirements():
-    log("=" * 55)
-    log("📄 STEP 1: Reading requirements file...")
-    log("=" * 55)
+def run_git(command):
+    result = subprocess.run(
+        command, shell=True,
+        capture_output=True, text=True,
+        cwd=DESTINATION_FOLDER
+    )
+    return (result.stdout or result.stderr or "").strip()
 
-    if not os.path.exists(REQUIREMENTS_FILE):
-        log(f"❌ Requirements file not found: {REQUIREMENTS_FILE}")
-        log("💡 Creating a sample requirements.txt for you...")
-        sample = """# AGENT REQUIREMENTS
-# Each line is a task the agent will do automatically
+def git_commit(message):
+    status = run_git("git status --short")
+    if not status.strip():
+        log(f"   ⚠️  Nothing to commit for: {message}")
+        return False
+    run_git("git add .")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    result = run_git(f'git commit -m "{message} [{timestamp}]"')
+    log(f"   💾 Committed: {message}")
+    log(f"   {result.splitlines()[0] if result else ''}")
+    return True
 
-TRANSFER_FILES: yes
-CREATE_README: yes
-CREATE_GITIGNORE: yes
-CREATE_REQUIREMENTS_TXT: yes
-IMPROVE_CODE: yes
-AUTO_COMMIT: yes
-AUTO_PUSH: yes
-COMMIT_MESSAGE: Auto agent - transferred files and updated repo
-"""
-        os.makedirs(os.path.dirname(REQUIREMENTS_FILE), exist_ok=True)
-        with open(REQUIREMENTS_FILE, "w") as f:
-            f.write(sample)
-        log(f"✅ Sample requirements.txt created at: {REQUIREMENTS_FILE}")
-        log("📝 Edit it then run agent again!")
-        return None
-
-    with open(REQUIREMENTS_FILE, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    log(f"✅ Requirements loaded from: {REQUIREMENTS_FILE}")
-    log(f"\n📋 Requirements content:\n{content}\n")
-    return content
+def git_push():
+    log("⬆️  Pushing all commits to GitHub...")
+    result = run_git(f"git push origin {GIT_BRANCH}")
+    log(result)
+    if "error" in result.lower() or "fatal" in result.lower():
+        log("❌ Push failed! Try: git push --set-upstream origin main")
+    else:
+        log("✅ All commits pushed to GitHub successfully!")
 
 # ══════════════════════════════════════════════════════
-# STEP 2: AI PARSES REQUIREMENTS
-# ══════════════════════════════════════════════════════
-def parse_requirements(req_text):
-    log("=" * 55)
-    log("🧠 STEP 2: AI is parsing requirements...")
-    log("=" * 55)
-
-    prompt = f"""You are an automation agent. Parse these requirements and extract tasks.
-
-REQUIREMENTS:
-{req_text}
-
-Reply in EXACTLY this format (yes/no for each):
-TRANSFER_FILES: yes or no
-CREATE_README: yes or no
-CREATE_GITIGNORE: yes or no
-CREATE_REQUIREMENTS_TXT: yes or no
-IMPROVE_CODE: yes or no
-AUTO_COMMIT: yes or no
-AUTO_PUSH: yes or no
-COMMIT_MESSAGE: <the commit message to use>
-EXTRA_TASKS: <any other tasks mentioned, or NONE>
-"""
-    result = ask_ai(prompt)
-    log(f"📋 Parsed tasks:\n{result}\n")
-
-    # Parse into dict
-    tasks = {
-        "TRANSFER_FILES": False,
-        "CREATE_README": False,
-        "CREATE_GITIGNORE": False,
-        "CREATE_REQUIREMENTS_TXT": False,
-        "IMPROVE_CODE": False,
-        "AUTO_COMMIT": False,
-        "AUTO_PUSH": False,
-        "COMMIT_MESSAGE": "Auto agent commit",
-        "EXTRA_TASKS": "NONE"
-    }
-
-    for line in result.split("\n"):
-        for key in tasks:
-            if line.startswith(f"{key}:"):
-                val = line.split(":", 1)[1].strip()
-                if key in ["TRANSFER_FILES","CREATE_README","CREATE_GITIGNORE",
-                           "CREATE_REQUIREMENTS_TXT","IMPROVE_CODE","AUTO_COMMIT","AUTO_PUSH"]:
-                    tasks[key] = "yes" in val.lower()
-                else:
-                    tasks[key] = val
-
-    log("✅ Requirements parsed successfully!")
-    return tasks
-
-# ══════════════════════════════════════════════════════
-# STEP 3: TRANSFER FILES FROM SOURCE TO DESTINATION
-# ══════════════════════════════════════════════════════
-def transfer_files():
-    log("=" * 55)
-    log("📂 STEP 3: Transferring files...")
-    log("=" * 55)
-
-    if not os.path.exists(SOURCE_FOLDER):
-        log(f"⚠️  Source folder not found: {SOURCE_FOLDER}")
-        log("💡 Creating sample source folder with test files...")
-        os.makedirs(SOURCE_FOLDER, exist_ok=True)
-
-        # Create sample files in source folder
-        sample_files = {
-            "main.py": '# Main application file\n\ndef hello():\n    print("Hello from dev agent!")\n\nif __name__ == "__main__":\n    hello()\n',
-            "utils.py": '# Utility functions\n\ndef add(a, b):\n    return a + b\n\ndef subtract(a, b):\n    return a - b\n',
-            "config.py": '# Configuration\nAPP_NAME = "Dev Agent"\nVERSION = "1.0.0"\nDEBUG = False\n',
-        }
-        for filename, content in sample_files.items():
-            path = os.path.join(SOURCE_FOLDER, filename)
-            with open(path, "w") as f:
-                f.write(content)
-            log(f"   📄 Created sample: {filename}")
-
-        log(f"✅ Sample files created in: {SOURCE_FOLDER}")
-
-    # Make sure destination exists
-    os.makedirs(DESTINATION_FOLDER, exist_ok=True)
-
-    # Get all files from source
-    transferred = []
-    skipped = []
-
-    for root, dirs, files in os.walk(SOURCE_FOLDER):
-        dirs[:] = [d for d in dirs if not d.startswith('.')]
-        for filename in files:
-            src_path = os.path.join(root, filename)
-            rel_path = os.path.relpath(src_path, SOURCE_FOLDER)
-            dst_path = os.path.join(DESTINATION_FOLDER, rel_path)
-
-            # Create subdirectories if needed
-            os.makedirs(os.path.dirname(dst_path), exist_ok=True)
-
-            try:
-                shutil.copy2(src_path, dst_path)
-                transferred.append(rel_path)
-                log(f"   ✅ Transferred: {rel_path}")
-            except Exception as e:
-                skipped.append(rel_path)
-                log(f"   ❌ Skipped: {rel_path} ({e})")
-
-    log(f"\n📊 Transfer Summary:")
-    log(f"   ✅ Transferred: {len(transferred)} files")
-    log(f"   ❌ Skipped:     {len(skipped)} files")
-    return transferred
-
-# ══════════════════════════════════════════════════════
-# STEP 4: AI GENERATES FILES BASED ON REQUIREMENTS
+# FILE TOOLS
 # ══════════════════════════════════════════════════════
 def list_repo_files():
     files = []
@@ -216,42 +103,86 @@ def write_to_repo(filename, content):
         f.write(content)
     log(f"   ✅ Created: {filename}")
 
-def create_readme():
+# ══════════════════════════════════════════════════════
+# STEP 1: READ REQUIREMENTS
+# ══════════════════════════════════════════════════════
+def read_requirements():
+    log("=" * 55)
+    log("📄 STEP 1: Reading requirements file...")
+    log("=" * 55)
+    if not os.path.exists(REQUIREMENTS_FILE):
+        log(f"❌ Not found: {REQUIREMENTS_FILE}")
+        return None
+    with open(REQUIREMENTS_FILE, "r", encoding="utf-8") as f:
+        content = f.read()
+    log(f"✅ Loaded successfully!")
+    return content
+
+# ══════════════════════════════════════════════════════
+# COMMIT 1: TRANSFER FILES
+# ══════════════════════════════════════════════════════
+def transfer_files():
+    log("=" * 55)
+    log("📂 COMMIT 1: Transferring source files...")
+    log("=" * 55)
+
+    if not os.path.exists(SOURCE_FOLDER):
+        log(f"⚠️  Source not found. Creating sample files...")
+        os.makedirs(SOURCE_FOLDER, exist_ok=True)
+        samples = {
+            "main.py":    '# Main app\n\ndef hello():\n    print("Hello from dev agent!")\n\nif __name__ == "__main__":\n    hello()\n',
+            "utils.py":   '# Utilities\n\ndef add(a, b):\n    return a + b\n\ndef subtract(a, b):\n    return a - b\n',
+            "config.py":  '# Config\nAPP_NAME = "Dev Agent"\nVERSION = "1.0.0"\nDEBUG = False\n',
+            "todo_app.py":'# Todo App\ntodos = []\n\ndef add_todo(item):\n    todos.append(item)\n\ndef list_todos():\n    return todos\n\ndef remove_todo(item):\n    todos.remove(item)\n',
+        }
+        for fname, code in samples.items():
+            with open(os.path.join(SOURCE_FOLDER, fname), "w") as f:
+                f.write(code)
+            log(f"   📄 Sample: {fname}")
+
+    os.makedirs(DESTINATION_FOLDER, exist_ok=True)
+    transferred = []
+
+    for root, dirs, files in os.walk(SOURCE_FOLDER):
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        for filename in files:
+            src = os.path.join(root, filename)
+            rel = os.path.relpath(src, SOURCE_FOLDER)
+            dst = os.path.join(DESTINATION_FOLDER, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+            transferred.append(rel)
+            log(f"   ✅ Transferred: {rel}")
+
+    log(f"\n📊 Total transferred: {len(transferred)} files")
+    git_commit("feat: transfer source files to repository")
+    return transferred
+
+# ══════════════════════════════════════════════════════
+# COMMIT 2: CREATE DOCUMENTATION
+# ══════════════════════════════════════════════════════
+def create_docs():
+    log("=" * 55)
+    log("📝 COMMIT 2: Creating documentation...")
+    log("=" * 55)
+
+    files = list_repo_files()
+
     log("\n📝 Creating README.md...")
-    files = list_repo_files()
-    prompt = f"""Create a professional README.md for a GitHub repository.
+    readme = clean_content(ask_ai(f"""Create a professional README.md for this GitHub repo.
+Files: {files}
+Include: title, description, features, installation, usage, license.
+Return ONLY markdown, no backticks:"""))
+    write_to_repo("README.md", readme)
 
-Files in the repo:
-{files}
-
-Include:
-- Project title and description
-- Features list
-- Installation steps
-- Usage examples
-- Requirements
-- License section
-
-Return ONLY the markdown content, no backticks:"""
-
-    content = clean_content(ask_ai(prompt))
-    write_to_repo("README.md", content)
-
-def create_gitignore():
     log("\n🚫 Creating .gitignore...")
-    prompt = """Create a .gitignore file for a Python project.
-Include ignores for: __pycache__, .env, venv, .pyc, logs, IDE files, OS files.
-Return ONLY the .gitignore content, no explanations:"""
+    gitignore = clean_content(ask_ai("""Create a .gitignore for Python project.
+Include: __pycache__, .env, venv, *.pyc, logs, IDE files.
+Return ONLY content:"""))
+    write_to_repo(".gitignore", gitignore)
 
-    content = clean_content(ask_ai(prompt))
-    write_to_repo(".gitignore", content)
-
-def create_requirements_txt():
     log("\n📦 Creating requirements.txt...")
-    files = list_repo_files()
-
-    # Read all python files to detect imports
-    imports_found = []
+    imports = []
     for root, dirs, filenames in os.walk(DESTINATION_FOLDER):
         dirs[:] = [d for d in dirs if not d.startswith('.')]
         for f in filenames:
@@ -260,175 +191,396 @@ def create_requirements_txt():
                     with open(os.path.join(root, f), "r") as fp:
                         for line in fp:
                             if line.startswith("import ") or line.startswith("from "):
-                                imports_found.append(line.strip())
+                                imports.append(line.strip())
                 except:
                     pass
 
-    prompt = f"""Based on these Python imports found in the project:
-{chr(10).join(imports_found[:30])}
+    req = clean_content(ask_ai(f"""Based on these imports:
+{chr(10).join(imports[:20])}
+Create requirements.txt with only third-party packages.
+Return ONLY requirements.txt content:"""))
+    write_to_repo("requirements.txt", req)
 
-Create a requirements.txt with only the third-party packages (not built-in Python modules).
-Include version numbers where important.
-Return ONLY the requirements.txt content:"""
+    git_commit("docs: add README, .gitignore and requirements.txt")
 
-    content = clean_content(ask_ai(prompt))
-    write_to_repo("requirements.txt", content)
-
+# ══════════════════════════════════════════════════════
+# COMMIT 3: IMPROVE CODE
+# ══════════════════════════════════════════════════════
 def improve_code():
-    log("\n✨ Improving Python files...")
+    log("=" * 55)
+    log("✨ COMMIT 3: Improving code quality...")
+    log("=" * 55)
+
+    improved = []
     for root, dirs, filenames in os.walk(DESTINATION_FOLDER):
         dirs[:] = [d for d in dirs if not d.startswith('.')]
         for filename in filenames:
-            if filename.endswith(".py") and filename != "agent.py":
+            if filename.endswith(".py") and filename not in ["agent.py", "agent.py"]:
                 filepath = os.path.join(root, filename)
                 try:
                     with open(filepath, "r", encoding="utf-8") as f:
                         code = f.read()
-
                     if len(code.strip()) < 10:
                         continue
-
                     log(f"   🔧 Improving: {filename}")
-                    prompt = f"""Improve this Python file by adding docstrings and comments:
-
+                    better = clean_content(ask_ai(f"""Improve this Python file:
 {code}
-
-Return ONLY the improved code, no backticks, no explanations:"""
-
-                    improved = clean_content(ask_ai(prompt))
+Add: docstrings, type hints, error handling, comments.
+Return ONLY improved code, no backticks:"""))
                     with open(filepath, "w", encoding="utf-8") as f:
-                        f.write(improved)
+                        f.write(better)
+                    improved.append(filename)
                     log(f"   ✅ Improved: {filename}")
-                    time.sleep(1)  # avoid overwhelming AI
+                    time.sleep(1)
                 except Exception as e:
-                    log(f"   ❌ Could not improve {filename}: {e}")
+                    log(f"   ❌ Skipped {filename}: {e}")
+
+    log(f"\n📊 Improved {len(improved)} files")
+    git_commit("refactor: improve code quality, add docstrings and type hints")
 
 # ══════════════════════════════════════════════════════
-# STEP 5: GIT COMMIT & PUSH
+# COMMIT 4: GENERATE TESTS
 # ══════════════════════════════════════════════════════
-def run_git(command):
-    result = subprocess.run(
-        command, shell=True,
-        capture_output=True, text=True,
-        cwd=DESTINATION_FOLDER
-    )
-    output = result.stdout or result.stderr or ""
-    return output.strip()
-
-def git_commit_and_push(commit_message):
+def generate_tests():
     log("=" * 55)
-    log("🚀 STEP 5: Git commit & push...")
+    log("🧪 COMMIT 4: Generating unit tests...")
     log("=" * 55)
 
-    # Check if git repo exists
-    if not os.path.exists(os.path.join(DESTINATION_FOLDER, ".git")):
-        log("⚠️  Not a git repo. Initializing...")
-        log(run_git("git init"))
-        log(run_git(f"git checkout -b {GIT_BRANCH}"))
+    created = []
+    for root, dirs, filenames in os.walk(DESTINATION_FOLDER):
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        for filename in filenames:
+            if (filename.endswith(".py")
+                    and not filename.startswith("test_")
+                    and filename not in ["agent.py", "agent.py", "setup.py"]):
+                filepath = os.path.join(root, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        code = f.read()
+                    if "def " not in code:
+                        continue
+                    log(f"   🧪 Tests for: {filename}")
+                    tests = clean_content(ask_ai(f"""Write pytest unit tests for:
+{code}
+Include: normal, edge, error cases.
+Return ONLY test code, no backticks:"""))
+                    write_to_repo(f"test_{filename}", tests)
+                    created.append(f"test_{filename}")
+                    time.sleep(1)
+                except Exception as e:
+                    log(f"   ❌ Skipped {filename}: {e}")
 
-    # Git status
-    status = run_git("git status --short")
-    log(f"\n📋 Changed files:\n{status}\n")
+    log(f"\n📊 Created {len(created)} test files")
+    git_commit("test: add pytest unit tests for all modules")
 
-    if not status.strip():
-        log("✅ Nothing to commit - everything is up to date!")
+# ══════════════════════════════════════════════════════
+# COMMIT 5: PERFORMANCE PROFILING REPORT
+# ══════════════════════════════════════════════════════
+def analyze_function_complexity(code, filename):
+    """
+    Statically analyzes Python code and returns metrics per function:
+    - line count
+    - number of loops (for/while)
+    - number of nested loops
+    - number of conditionals (if/elif)
+    - number of function calls
+    - complexity score (weighted sum)
+    """
+    results = []
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return results
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+
+        func_name = node.name
+        func_lines = (node.end_lineno - node.lineno + 1) if hasattr(node, 'end_lineno') else 0
+
+        loops        = 0
+        nested_loops = 0
+        conditionals = 0
+        calls        = 0
+        in_loop      = False
+
+        for child in ast.walk(node):
+            if isinstance(child, (ast.For, ast.While)):
+                loops += 1
+                # check if this loop is inside another loop
+                for parent in ast.walk(node):
+                    if isinstance(parent, (ast.For, ast.While)) and parent is not child:
+                        for grandchild in ast.walk(parent):
+                            if grandchild is child:
+                                nested_loops += 1
+                                break
+            if isinstance(child, (ast.If, ast.IfExp)):
+                conditionals += 1
+            if isinstance(child, ast.Call):
+                calls += 1
+
+        # Weighted complexity score
+        score = (
+            func_lines * 0.1 +
+            loops * 3 +
+            nested_loops * 8 +
+            conditionals * 2 +
+            calls * 0.5
+        )
+
+        results.append({
+            "file":        filename,
+            "function":    func_name,
+            "lines":       func_lines,
+            "loops":       loops,
+            "nested":      nested_loops,
+            "conditions":  conditionals,
+            "calls":       calls,
+            "score":       round(score, 1),
+        })
+
+    return results
+
+
+def performance_report():
+    log("=" * 55)
+    log("⚡ COMMIT 5: Performance profiling report...")
+    log("=" * 55)
+
+    all_metrics   = []
+    skipped_files = []
+    total_lines   = 0
+    total_funcs   = 0
+
+    # ── Collect metrics from every .py file ──
+    for root, dirs, filenames in os.walk(DESTINATION_FOLDER):
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        for filename in filenames:
+            if not filename.endswith(".py"):
+                continue
+            filepath = os.path.join(root, filename)
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    code = f.read()
+
+                lines = len(code.splitlines())
+                total_lines += lines
+
+                metrics = analyze_function_complexity(code, filename)
+                total_funcs += len(metrics)
+                all_metrics.extend(metrics)
+                log(f"   📊 Analyzed: {filename} ({lines} lines, {len(metrics)} functions)")
+
+            except Exception as e:
+                skipped_files.append(filename)
+                log(f"   ⚠️  Skipped: {filename} ({e})")
+
+    if not all_metrics:
+        log("   ⚠️  No Python functions found to analyze.")
         return
 
-    # Stage all files
-    log("📦 Staging all files...")
-    log(run_git("git add ."))
+    # ── Sort by complexity score descending ──
+    all_metrics.sort(key=lambda x: x["score"], reverse=True)
 
-    # Commit
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    full_message = f"{commit_message} [{timestamp}]"
-    log(f"💾 Committing: {full_message}")
-    commit_result = run_git(f'git commit -m "{full_message}"')
-    log(commit_result)
+    # ── Build the markdown table ──
+    table_rows = ""
+    for m in all_metrics:
+        if m["score"] >= 15:
+            severity = "🔴 High"
+        elif m["score"] >= 7:
+            severity = "🟡 Medium"
+        else:
+            severity = "🟢 Low"
 
-    # Push
-    log(f"⬆️  Pushing to GitHub ({GIT_BRANCH})...")
-    push_result = run_git(f"git push origin {GIT_BRANCH}")
-    log(push_result)
+        table_rows += (
+            f"| `{m['file']}` | `{m['function']}` | {m['lines']} | "
+            f"{m['loops']} | {m['nested']} | {m['conditions']} | "
+            f"{m['score']} | {severity} |\n"
+        )
 
-    if "error" in push_result.lower() or "fatal" in push_result.lower():
-        log("❌ Push failed! Check your GitHub connection.")
-        log("💡 Try: git push --set-upstream origin main")
-    else:
-        log("✅ Successfully pushed to GitHub!")
+    # ── Top 5 slowest functions for AI analysis ──
+    top5 = all_metrics[:5]
+    top5_summary = "\n".join(
+        f"- {m['function']}() in {m['file']}: score={m['score']}, "
+        f"loops={m['loops']}, nested={m['nested']}, lines={m['lines']}"
+        for m in top5
+    )
+
+    log("\n🧠 AI analyzing top complex functions...")
+    ai_suggestions = ask_ai(f"""You are a Python performance expert.
+
+These are the most complex functions found by static analysis:
+{top5_summary}
+
+For each function, provide:
+1. Why it might be slow
+2. A specific optimization suggestion (e.g. use list comprehension, cache results, avoid nested loops)
+3. Expected improvement
+
+Format as markdown with ### headings per function. Be specific and practical:""")
+
+    # ── Overall stats for AI ──
+    avg_score = round(sum(m["score"] for m in all_metrics) / len(all_metrics), 1)
+    high_risk = [m for m in all_metrics if m["score"] >= 15]
+    medium_risk = [m for m in all_metrics if 7 <= m["score"] < 15]
+    low_risk = [m for m in all_metrics if m["score"] < 7]
+
+    # ── Write PERFORMANCE.md ──
+    report_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    content = f"""# ⚡ Performance Analysis Report
+
+> Auto-generated by Dev Agent on {report_date}
+
+---
+
+## 📊 Summary
+
+| Metric | Value |
+|--------|-------|
+| Total files analyzed | {len(set(m['file'] for m in all_metrics))} |
+| Total functions found | {total_funcs} |
+| Total lines of code | {total_lines} |
+| Average complexity score | {avg_score} |
+| 🔴 High complexity functions | {len(high_risk)} |
+| 🟡 Medium complexity functions | {len(medium_risk)} |
+| 🟢 Low complexity functions | {len(low_risk)} |
+
+---
+
+## 🔢 Complexity Score Guide
+
+| Score | Risk | Meaning |
+|-------|------|---------|
+| 0 – 6 | 🟢 Low | Simple, fast function |
+| 7 – 14 | 🟡 Medium | Review for optimization |
+| 15+ | 🔴 High | Likely bottleneck — optimize |
+
+**Score formula:**
+```
+score = (lines × 0.1) + (loops × 3) + (nested_loops × 8) + (conditions × 2) + (calls × 0.5)
+```
+
+---
+
+## 📋 Full Function Complexity Table
+
+| File | Function | Lines | Loops | Nested Loops | Conditions | Score | Risk |
+|------|----------|-------|-------|--------------|------------|-------|------|
+{table_rows}
+
+---
+
+## 🧠 AI Optimization Suggestions
+
+{ai_suggestions}
+
+---
+
+## 🛠️ General Performance Tips
+
+1. **Avoid nested loops** — O(n²) complexity grows fast. Use dictionaries/sets for lookups instead.
+2. **Use list comprehensions** — faster than `for` loop + `.append()`.
+3. **Cache repeated results** — use `functools.lru_cache` for pure functions called multiple times.
+4. **Prefer built-in functions** — `map()`, `filter()`, `sum()` are implemented in C and faster.
+5. **Use generators** — `yield` instead of building large lists saves memory.
+6. **Profile before optimizing** — use `cProfile` to find real bottlenecks:
+   ```bash
+   python -m cProfile -s cumulative your_script.py
+   ```
+
+---
+
+## 📁 Files Skipped
+
+{chr(10).join(f'- {f}' for f in skipped_files) if skipped_files else '- None'}
+
+---
+
+*Generated by [Dev Agent](https://github.com/itsharsh9876/dev-agent)*
+"""
+
+    write_to_repo("PERFORMANCE.md", content)
+    log(f"\n📊 Performance Report Summary:")
+    log(f"   🔴 High risk:   {len(high_risk)} functions")
+    log(f"   🟡 Medium risk: {len(medium_risk)} functions")
+    log(f"   🟢 Low risk:    {len(low_risk)} functions")
+    log(f"   📈 Avg score:   {avg_score}")
+
+    git_commit("perf: add performance profiling and optimization report")
+
 
 # ══════════════════════════════════════════════════════
-# MASTER AGENT - RUNS EVERYTHING
+# SHOW COMMIT HISTORY
+# ══════════════════════════════════════════════════════
+def show_commit_history():
+    log("=" * 55)
+    log("📜 FINAL COMMIT HISTORY")
+    log("=" * 55)
+    history = run_git("git log --oneline -10")
+    for line in history.splitlines():
+        log(f"   {line}")
+
+# ══════════════════════════════════════════════════════
+# MASTER AGENT
 # ══════════════════════════════════════════════════════
 def run_full_agent():
     start_time = time.time()
 
     print("\n" + "🤖" * 25)
     print("   FULL AUTOMATED DEV AGENT")
+    print("   4 COMMITS → AUTO PUSH")
     print("🤖" * 25)
-    print(f"📂 Source:      {SOURCE_FOLDER}")
-    print(f"📂 Destination: {DESTINATION_FOLDER}")
-    print(f"📄 Requirements:{REQUIREMENTS_FILE}")
-    print("🤖" * 25 + "\n")
+    print(f"📂 Source:       {SOURCE_FOLDER}")
+    print(f"📂 Destination:  {DESTINATION_FOLDER}")
+    print(f"📄 Requirements: {REQUIREMENTS_FILE}")
+    print("🤖" * 25)
+    print("""
+📌 COMMIT PLAN:
+   COMMIT 1 → feat:     Transfer source files
+   COMMIT 2 → docs:     README + .gitignore + requirements.txt
+   COMMIT 3 → refactor: Improve code quality
+   COMMIT 4 → test:     Add unit tests
+   COMMIT 5 → perf:     Performance profiling report
+   PUSH     → All commits go live on GitHub
+""")
 
-    # ── STEP 1: Read requirements ──
     req_text = read_requirements()
     if req_text is None:
-        log("⚠️  Created sample requirements.txt. Edit it and run again.")
+        log("❌ Fix requirements file and try again.")
         return
 
-    # ── STEP 2: Parse requirements ──
-    tasks = parse_requirements(req_text)
-
-    # ── STEP 3: Transfer files ──
-    if tasks["TRANSFER_FILES"]:
-        transferred = transfer_files()
-    else:
-        log("⏭️  Skipping file transfer (not in requirements)")
-
-    # ── STEP 4: Generate files ──
-    log("=" * 55)
-    log("✨ STEP 4: Generating files from requirements...")
-    log("=" * 55)
-
-    if tasks["CREATE_README"]:
-        create_readme()
-    else:
-        log("⏭️  Skipping README (not in requirements)")
-
-    if tasks["CREATE_GITIGNORE"]:
-        create_gitignore()
-    else:
-        log("⏭️  Skipping .gitignore (not in requirements)")
-
-    if tasks["CREATE_REQUIREMENTS_TXT"]:
-        create_requirements_txt()
-    else:
-        log("⏭️  Skipping requirements.txt (not in requirements)")
-
-    if tasks["IMPROVE_CODE"]:
-        improve_code()
-    else:
-        log("⏭️  Skipping code improvement (not in requirements)")
-
-    # ── STEP 5: Git commit & push ──
-    if tasks["AUTO_COMMIT"] or tasks["AUTO_PUSH"]:
-        git_commit_and_push(tasks["COMMIT_MESSAGE"])
-    else:
-        log("⏭️  Skipping git push (not in requirements)")
-
-    # ── DONE ──
-    elapsed = round(time.time() - start_time, 2)
-    log("\n" + "=" * 55)
-    log(f"✅ ALL TASKS COMPLETE in {elapsed} seconds!")
-    log("=" * 55)
+    transfer_files()
+    create_docs()
+    improve_code()
+    generate_tests()
+    performance_report()
 
     save_log()
+    git_commit("chore: add agent activity log")
 
-    print(f"\n🎉 Check your GitHub repo:")
-    print(f"   https://github.com/itsharsh9876/dev-agent")
+    log("=" * 55)
+    log("🚀 PUSHING ALL COMMITS TO GITHUB...")
+    log("=" * 55)
+    git_push()
 
-# ══════════════════════════════════════════════════════
-# ENTRY POINT
-# ══════════════════════════════════════════════════════
+    show_commit_history()
+
+    elapsed = round(time.time() - start_time, 2)
+    log(f"\n✅ ALL DONE in {elapsed} seconds!")
+
+    print(f"""
+🎉 CHECK YOUR GITHUB REPO:
+   https://github.com/itsharsh9876/dev-agent
+
+📊 YOU SHOULD SEE 6 COMMITS:
+   ✅ feat:     transfer source files
+   ✅ docs:     README, .gitignore, requirements
+   ✅ refactor: improve code quality
+   ✅ test:     add unit tests
+   ✅ perf:     performance profiling report
+   ✅ chore:    agent activity log
+""")
+
 if __name__ == "__main__":
     run_full_agent()
