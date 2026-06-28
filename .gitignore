@@ -1,12 +1,19 @@
-__pycache__/ 
-*.env
+# Ignore compiled Python files
+__pycache__/ *
+*.pyc
+*.pyo
+
+# Ignore virtual environment directory
 venv/
-.__pycache__/
-*.* 
-*.log 
-*.idea/ 
-*.iml 
-Thumbs.db 
-ehthumbs.db 
-*.swp 
-.DS_Store
+
+# Ignore environment variables file
+.env
+
+# Ignore IDE project files
+.idea/
+.netrc
+ Thyphoeus/__pycache__/*
+ PyCharm/*
+ PyCharmProjectFiles/*
+ VisualStudioCode/*
+.vscode/
