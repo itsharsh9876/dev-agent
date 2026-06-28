@@ -1,109 +1,81 @@
-[17:29:09] =======================================================
-[17:29:09] 📄 STEP 1: Reading requirements file...
-[17:29:09] =======================================================
-[17:29:09] ✅ Requirements loaded from: C:/Users/APNABEAST/Documents/requirements.txt
-[17:29:09] 
-📋 Requirements content:
-# ════════════════════════════════════════
-# AGENT REQUIREMENTS FILE
-# The agent reads this and does everything
-# automatically. Edit yes/no for each task.
-# ════════════════════════════════════════
-
-# Transfer all files from source folder to repo?
-TRANSFER_FILES: yes
-
-# Auto-create a README.md file?
-CREATE_README: yes
-
-# Auto-create a .gitignore file?
-CREATE_GITIGNORE: yes
-
-# Auto-create requirements.txt from code imports?
-CREATE_REQUIREMENTS_TXT: yes
-
-# Auto-improve all Python files (add comments/docstrings)?
-IMPROVE_CODE: yes
-
-# Auto git commit after all tasks?
-AUTO_COMMIT: yes
-
-# Auto git push to GitHub after commit?
-AUTO_PUSH: yes
-
-# What commit message to use?
-COMMIT_MESSAGE: Auto agent - transferred files, created docs, improved code
-
-
-[17:29:09] =======================================================
-[17:29:09] 🧠 STEP 2: AI is parsing requirements...
-[17:29:09] =======================================================
-[17:29:53] 📋 Parsed tasks:
-TRANSFER_FILES: yes
-CREATE_README: yes
-CREATE_GITIGNORE: yes
-CREATE_REQUIREMENTS_TXT: yes
-IMPROVE_CODE: yes
-AUTO_COMMIT: yes
-AUTO_PUSH: yes
-COMMIT_MESSAGE: Auto agent - transferred files, created docs, improved code
-
-[17:29:53] ✅ Requirements parsed successfully!
-[17:29:53] =======================================================
-[17:29:53] 📂 STEP 3: Transferring files...
-[17:29:53] =======================================================
-[17:29:53]    ✅ Transferred: config.py
-[17:29:53]    ✅ Transferred: main.py
-[17:29:53]    ✅ Transferred: utils.py
-[17:29:53] 
-📊 Transfer Summary:
-[17:29:53]    ✅ Transferred: 3 files
-[17:29:53]    ❌ Skipped:     0 files
-[17:29:53] =======================================================
-[17:29:53] ✨ STEP 4: Generating files from requirements...
-[17:29:53] =======================================================
-[17:29:53] 
+[17:48:45] =======================================================
+[17:48:45] 📄 STEP 1: Reading requirements file...
+[17:48:45] =======================================================
+[17:48:45] ✅ Loaded successfully!
+[17:48:45] =======================================================
+[17:48:45] 📂 COMMIT 1: Transferring source files...
+[17:48:45] =======================================================
+[17:48:45]    ✅ Transferred: config.py
+[17:48:45]    ✅ Transferred: main.py
+[17:48:45]    ✅ Transferred: utils.py
+[17:48:45] 
+📊 Total transferred: 3 files
+[17:48:46]    💾 Committed: feat: transfer source files to repository
+[17:48:46]    [main 19de470] feat: transfer source files to repository [2026-06-28 17:48:45]
+[17:48:46] =======================================================
+[17:48:46] 📝 COMMIT 2: Creating documentation...
+[17:48:46] =======================================================
+[17:48:46] 
 📝 Creating README.md...
-[17:31:14]    ✅ Created: README.md
-[17:31:14] 
+[17:49:31]    ✅ Created: README.md
+[17:49:31] 
 🚫 Creating .gitignore...
-[17:31:24]    ✅ Created: .gitignore
-[17:31:24] 
+[17:49:44]    ✅ Created: .gitignore
+[17:49:44] 
 📦 Creating requirements.txt...
-[17:31:34]    ✅ Created: requirements.txt
-[17:31:34] 
-✨ Improving Python files...
-[17:31:34]    🔧 Improving: config.py
-[17:31:51]    ✅ Improved: config.py
-[17:31:52]    🔧 Improving: main.py
-[17:32:02]    ✅ Improved: main.py
-[17:32:03]    🔧 Improving: todo_app.py
-[17:34:15]    ✅ Improved: todo_app.py
-[17:34:16]    🔧 Improving: utils.py
-[17:34:37]    ✅ Improved: utils.py
-[17:34:38] =======================================================
-[17:34:38] 🚀 STEP 5: Git commit & push...
-[17:34:38] =======================================================
-[17:34:39] 
-📋 Changed files:
-M .gitignore
- M README.md
- M config.py
- M main.py
- M requirements.txt
- M todo_app.py
- M utils.py
-
-[17:34:39] 📦 Staging all files...
-[17:34:39] 
-[17:34:39] 💾 Committing: Auto agent - transferred files, created docs, improved code [2026-06-28 17:34:39]
-[17:34:40] [main 181a739] Auto agent - transferred files, created docs, improved code [2026-06-28 17:34:39]
- 7 files changed, 111 insertions(+), 48 deletions(-)
-[17:34:40] ⬆️  Pushing to GitHub (main)...
-[17:34:42] fatal: unable to access 'https://github.com/itsharsh9876/dev-agent.git/': Could not resolve host: github.com
-[17:34:42] ❌ Push failed! Check your GitHub connection.
-[17:34:42] 💡 Try: git push --set-upstream origin main
-[17:34:42] 
-=======================================================
-[17:34:42] ✅ ALL TASKS COMPLETE in 333.04 seconds!
-[17:34:42] =======================================================
+[17:49:49]    ✅ Created: requirements.txt
+[17:49:50]    💾 Committed: docs: add README, .gitignore and requirements.txt
+[17:49:50]    [main 59c3753] docs: add README, .gitignore and requirements.txt [2026-06-28 17:49:50]
+[17:49:50] =======================================================
+[17:49:50] ✨ COMMIT 3: Improving code quality...
+[17:49:50] =======================================================
+[17:49:50]    🔧 Improving: config.py
+[17:50:39]    ✅ Improved: config.py
+[17:50:40]    🔧 Improving: main.py
+[17:51:16]    ✅ Improved: main.py
+[17:51:17]    🔧 Improving: todo_app.py
+[17:54:26]    ✅ Improved: todo_app.py
+[17:54:27]    🔧 Improving: utils.py
+[17:54:53]    ✅ Improved: utils.py
+[17:54:54] 
+📊 Improved 4 files
+[17:54:55]    💾 Committed: refactor: improve code quality, add docstrings and type hints
+[17:54:55]    [main 85c2532] refactor: improve code quality, add docstrings and type hints [2026-06-28 17:54:55]
+[17:54:55] =======================================================
+[17:54:55] 🧪 COMMIT 4: Generating unit tests...
+[17:54:55] =======================================================
+[17:54:55]    🧪 Tests for: config.py
+[17:56:07]    ✅ Created: test_config.py
+[17:56:08]    🧪 Tests for: main.py
+[17:57:02]    ✅ Created: test_main.py
+[17:57:03]    🧪 Tests for: todo_app.py
+[17:59:25]    ✅ Created: test_todo_app.py
+[17:59:26]    🧪 Tests for: utils.py
+[18:00:16]    ✅ Created: test_utils.py
+[18:00:17] 
+📊 Created 4 test files
+[18:00:18]    💾 Committed: test: add pytest unit tests for all modules
+[18:00:18]    [main 64d6d96] test: add pytest unit tests for all modules [2026-06-28 18:00:18]
+[18:00:18] =======================================================
+[18:00:18] ⚡ COMMIT 5: Performance profiling report...
+[18:00:18] =======================================================
+[18:00:19]    📊 Analyzed: agent.py (586 lines, 18 functions)
+[18:00:19]    📊 Analyzed: config.py (45 lines, 1 functions)
+[18:00:19]    📊 Analyzed: main.py (27 lines, 0 functions)
+[18:00:19]    📊 Analyzed: test_config.py (71 lines, 6 functions)
+[18:00:19]    📊 Analyzed: test_main.py (39 lines, 0 functions)
+[18:00:19]    📊 Analyzed: test_todo_app.py (75 lines, 13 functions)
+[18:00:19]    📊 Analyzed: test_utils.py (34 lines, 0 functions)
+[18:00:19]    📊 Analyzed: todo_app.py (117 lines, 5 functions)
+[18:00:19]    📊 Analyzed: utils.py (29 lines, 2 functions)
+[18:00:19] 
+🧠 AI analyzing top complex functions...
+[18:02:54]    ✅ Created: PERFORMANCE.md
+[18:02:54] 
+📊 Performance Report Summary:
+[18:02:54]    🔴 High risk:   9 functions
+[18:02:54]    🟡 Medium risk: 5 functions
+[18:02:54]    🟢 Low risk:    31 functions
+[18:02:54]    📈 Avg score:   11.4
+[18:02:58]    💾 Committed: perf: add performance profiling and optimization report
+[18:02:58]    [main 96a40b4] perf: add performance profiling and optimization report [2026-06-28 18:02:56]
