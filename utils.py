@@ -4,29 +4,28 @@ Utility functions for arithmetic operations.
 
 def add(a, b):
     """
-    Returns the sum of two numbers.
+    Adds two numbers together.
 
     Args:
         a (float): The first number.
         b (float): The second number.
 
     Returns:
-        float: The sum of a and b.
+        float: The sum of the two numbers.
     """
-    # Add a and b
+    # Calculate the sum of the two input numbers
     return a + b
-
 
 def subtract(a, b):
     """
-    Returns the difference between two numbers.
+    Subtracts one number from another.
 
     Args:
         a (float): The first number.
         b (float): The second number.
 
     Returns:
-        float: The difference of a and b.
+        float: The difference between the two numbers.
     """
-    # Subtract b from a
+    # Calculate the difference of the two input numbers
     return a - b

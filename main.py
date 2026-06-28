@@ -1,5 +1,5 @@
 """
-Main application file.
+Main application file
 """
 
 def hello():
@@ -9,8 +9,9 @@ def hello():
     Returns:
         None
     """
+    # Print a standard greeting to the console.
     print("Hello from dev agent!")
 
 if __name__ == "__main__":
-    # Entry point for the application
+    # Call the hello function when this script is run directly.
     hello()
